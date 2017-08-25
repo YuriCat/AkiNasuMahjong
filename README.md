@@ -2,3 +2,6 @@
 Program for Japanese Mahjong
 
 製作頓挫中?
+
+# 麻雀floodgate
+http://www.logos.t.u-tokyo.ac.jp/mjlog/
