@@ -146,7 +146,7 @@ namespace Mahjong{
             action_t action;
             
             // モンテカルロ統計
-            uint32_t trials;
+            uint32_t simulations;
             
             BetaDistribution utility;
             uint64_t scoreSum;
@@ -160,13 +160,12 @@ namespace Mahjong{
             BitSet64 acceptable;
             int acceptableNum;
             
-            
             double mean()const{ return utility.mean(); }
             double mean_var()const{ return utility.var(); }
             
             void initSatistics()noexcept{
                 // モンテカルロでの統計初期化
-                trials = 0;
+                simulations = 0;
                 utility.set(0.5, 0.5); // 報酬事前分布
                 distribution.fill(0.5); // 最終順位事前分布
                 drawWins = responseWins = presents = 0;
@@ -180,7 +179,7 @@ namespace Mahjong{
             void feed(const result_t& result)noexcept{
                 const double reward = distributionToReward(result.distribution);
                 utility += BetaDistribution(reward, 1 - reward);
-                trials += 1;
+                simulations += 1;
                 scoreSum += result.nextScore;
                 for(int i = 0; i < N_PLAYERS; ++i){
                     distribution.add(i, result.distribution[i]);
@@ -195,11 +194,11 @@ namespace Mahjong{
             }
             
             uint32_t wins()const noexcept{ return drawWins + responseWins; }
-            double drawWinRate()const{ return drawWins / (double)trials; }
-            double responseWinRate()const{ return responseWins / (double)trials; }
-            double winRate()const{ return wins() / (double)trials; }
-            double presentRate()const{ return presents / (double)trials; }
-            double meanScore()const{ return (double)scoreSum / trials; }
+            double drawWinRate()const{ return drawWins / (double)simulations; }
+            double responseWinRate()const{ return responseWins / (double)simulations; }
+            double winRate()const{ return wins() / (double)simulations; }
+            double presentRate()const{ return presents / (double)simulations; }
+            double meanScore()const{ return (double)scoreSum / simulations; }
         };
         
         template<>template<class field_t>
@@ -256,7 +255,7 @@ namespace Mahjong{
             int actions;
             Score originalScore;
             
-            uint32_t trials;
+            uint32_t simulations;
             BetaDistribution allUtility;
             
 #ifdef MULTI_THREADING
@@ -298,7 +297,7 @@ namespace Mahjong{
             void init()noexcept{
                 lock_.unlock();
                 actions = 0;
-                trials = 0;
+                simulations = 0;
             }
             
             std::string toString()const{
@@ -318,11 +317,11 @@ namespace Mahjong{
                     oss << i << " " << sortedAction[i].action << " : " << mean << " ( " << ci[0] << " ~ " << ci[1] << " ) ";
                     oss << "ms = " << sortedAction[i].minimumSteps;
                     oss << " pol = " << (int(sortedAction[i].policyScore * 10000) / 10000.0) << " ";
-                    if(sortedAction[i].trials > 0){
+                    if(sortedAction[i].simulations > 0){
                         oss << "w:" << int(sortedAction[i].winRate() * 100);
                         oss << "(" << int(sortedAction[i].drawWinRate() * 100) << "," << int(sortedAction[i].responseWinRate() * 100) << ") ";
                         oss << "sc " << int(sortedAction[i].meanScore() - (double)originalScore) << " ";
-                        oss << sortedAction[i].trials << " trials.";
+                        oss << sortedAction[i].simulations << " simulations.";
                     }
                     oss << endl;
                     if(i == 0){

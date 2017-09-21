@@ -19,7 +19,7 @@ namespace Mahjong{
     struct Field{
         // 盤面データ
         // 主観的情報のみ用いる場合はそれ以外の箇所の値は未定義
-        MatchType matchType;
+        MatchType matchType; // 対戦の種類
         Player myPlayerNum; // 自分のプレーヤー番号
         
         // 局をまたいで変化する情報(基本毎回再設定のため情報がくる)
@@ -44,7 +44,7 @@ namespace Mahjong{
         ExtPieceSet open; // 全員に対して開示された牌の集合
         PieceSet dora; // ドラ
         int doras; // ドラ枚数
-        int kongs; // 局全体でのカンの回数
+        int kongs; // 局全体でのカンの回数(制限がある)
         
         // 主観的にわからない情報
         Pack128<int32_t, N_PLAYERS> pieces; // 手牌の数(構成がわからなくても枚数さえわかればここに入れる)
@@ -120,7 +120,7 @@ namespace Mahjong{
             ASSERT(examPlayerNum(pn), cerr << pn << endl;);
         }
         // 終局処理
-        void switchOwner()noexcept{
+        void switchOwner()noexcept{ // 親交代
             owner = nextPlayer(owner);
             if(owner == 0){
                 rounds += 1;
@@ -183,9 +183,9 @@ namespace Mahjong{
             for(Player p = turnPlayer + 1; p < N_PLAYERS; ++p)uncertain[p] -= ep;
             
             // ツモ切りのとき山牌の情報が確定(ただし自分の手番ではすでに分かっている)
-            if(parrot){
+            if(parrot)
                 wall[wallIndexTurn(turn)] = ep;
-            }
+
             //DERR << "Field::discard()" << endl << toString();
             ASSERT(exam(),);
         }
@@ -382,16 +382,12 @@ namespace Mahjong{
             // 得点更新が終わっていることを仮定
             position.clear();
             for(Player p0 = 0; p0 < N_PLAYERS; ++p0){
-                for(Player p1 = 0; p1 < p0; ++p1){
-                    if(score[p0] <= score[p1]){ // 同点なら第1局の風が優先
+                for(Player p1 = 0; p1 < p0; ++p1)
+                    if(score[p0] <= score[p1]) // 同点なら第1局の風が優先
                         position.add(p0, 1);
-                    }
-                }
-                for(Player p1 = p0 + 1; p1 < N_PLAYERS; ++p1){
-                    if(score[p0] < score[p1]){
+                for(Player p1 = p0 + 1; p1 < N_PLAYERS; ++p1)
+                    if(score[p0] < score[p1])
                         position.add(p0, 1);
-                    }
-                }
             }
             invPosition = invert(position);
         }
@@ -450,6 +446,7 @@ namespace Mahjong{
             return oss.str();
         }
         
+        // 以下validation
         bool examPlayersInfo(Player pn)const{
             if(!hand[pn].exam()){
                 cerr << "Field::examPlayersInfo() : illegal hand of " << pn << endl;
@@ -505,7 +502,8 @@ namespace Mahjong{
                 eps += wall[i];
             }
             if(eps != EXT_PIECE_SET_ALL){
-                cerr << "Field::examSettledPieces() : hand(concealed, opened) - picked + discarded + wall != ALL" << endl;
+                cerr << "Field::examSettledPieces() : ";
+                cerr << "hand(concealed, opened) - picked + discarded + wall != ALL" << endl;
                 cerr << "all : " << eps.array() << eps.red() << endl;
                 for(Player pn = 0; pn < N_PLAYERS; ++pn){
                     cerr << "picked : " << pickedSet[pn] << " discarded : " << discardedSet[pn] << endl;
